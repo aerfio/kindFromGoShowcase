@@ -15,12 +15,15 @@ require (
 	github.com/jmoiron/sqlx v1.2.0 // indirect
 	github.com/lib/pq v1.2.0 // indirect
 	github.com/mitchellh/copystructure v1.0.0 // indirect
+	github.com/pkg/errors v0.8.1
 	github.com/rubenv/sql-migrate v0.0.0-20191025130928-9355dd04f4b3 // indirect
 	github.com/ziutek/mymysql v1.5.4 // indirect
 	golang.org/x/time v0.0.0-20191024005414-555d28b269f0 // indirect
 	gopkg.in/gorp.v1 v1.7.2 // indirect
+	k8s.io/api v0.0.0
+	k8s.io/apimachinery v0.0.0
 	k8s.io/client-go v11.0.0+incompatible
-	k8s.io/helm v2.16.0+incompatible // indirect
+	k8s.io/helm v2.16.0+incompatible
 	k8s.io/kubernetes v1.16.2 // indirect
 	k8s.io/utils v0.0.0-20191030222137-2b95a09bc58d // indirect
 	sigs.k8s.io/kind v0.5.1

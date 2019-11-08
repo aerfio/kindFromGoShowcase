@@ -1,6 +1,8 @@
 #!/bin/sh
 set -euo pipefail
 
+# script to fix go.mod
+
 VERSION=${1#"v"}
 if [ -z "$VERSION" ]; then
     echo "Must specify version!"
