@@ -139,7 +139,7 @@ func main() {
 	} else if err != chartutil.ErrRequirementsNotFound {
 		log.Fatal("AWSD")
 	}
-
+	
 	resp, err := helmClient.InstallReleaseFromChart(chartRequested, ns, helm.InstallWait(true), helm.ReleaseName("rafter-release"), helm.InstallDescription("data"))
 	if err != nil {
 		log.Fatal(errors.Wrap(err, "while installing helm chart"))

@@ -1,6 +1,6 @@
 module github.com/aerfio/kindtest
 
-go 1.13
+go 1.12
 
 require (
 	github.com/DATA-DOG/go-sqlmock v1.3.3 // indirect
@@ -9,7 +9,6 @@ require (
 	github.com/Masterminds/sprig v2.22.0+incompatible // indirect
 	github.com/gobuffalo/packr v1.30.1 // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
-	github.com/helm/helm v2.16.0+incompatible
 	github.com/huandu/xstrings v1.2.0 // indirect
 	github.com/imdario/mergo v0.3.8 // indirect
 	github.com/jmoiron/sqlx v1.2.0 // indirect
