@@ -1,24 +1,24 @@
 package main
 
 import (
-	`fmt`
+	"fmt"
 	"log"
-	`os`
+	"os"
 	"time"
 
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	v1rbac "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	`k8s.io/client-go/rest`
+	"k8s.io/client-go/rest"
 	"k8s.io/helm/cmd/helm/installer"
-	`k8s.io/helm/pkg/chartutil`
-	`k8s.io/helm/pkg/downloader`
-	`k8s.io/helm/pkg/getter`
-	`k8s.io/helm/pkg/helm`
-	`k8s.io/helm/pkg/helm/environment`
-	`k8s.io/helm/pkg/helm/portforwarder`
-	`k8s.io/helm/pkg/renderutil`
+	"k8s.io/helm/pkg/chartutil"
+	"k8s.io/helm/pkg/downloader"
+	"k8s.io/helm/pkg/getter"
+	"k8s.io/helm/pkg/helm"
+	"k8s.io/helm/pkg/helm/environment"
+	"k8s.io/helm/pkg/helm/portforwarder"
+	"k8s.io/helm/pkg/renderutil"
 	"sigs.k8s.io/kind/pkg/cluster/create"
 
 	"k8s.io/client-go/kubernetes"
@@ -37,6 +37,7 @@ func main() {
 	ctx := cluster.NewContext(contextName)
 
 	if err := ctx.Delete(); err == nil {
+		// convenience for local development
 		log.Println("Deleted old kind cluster")
 	}
 
@@ -105,12 +106,14 @@ func main() {
 	}
 	log.Println("Tiller successfully pinged")
 
-	chartRequested, err := chartutil.Load("charts/rafter-upload-service")
+	chartDir := "charts/rafter-front-matter-service"
+
+	chartRequested, err := chartutil.Load(chartDir)
 	if err != nil {
 		log.Fatal(errors.Wrap(err, "while loading chart"))
 	}
 
-	chartDir := "charts/rafter-asyncapi-service"
+	time.Sleep(30 * time.Second)
 
 	if req, err := chartutil.LoadRequirements(chartRequested); err == nil {
 		// If checkDependencies returns an error, we have unfulfilled dependencies.
@@ -137,20 +140,14 @@ func main() {
 
 		}
 	} else if err != chartutil.ErrRequirementsNotFound {
-		log.Fatal("AWSD")
+		log.Fatal()
 	}
-	
-	resp, err := helmClient.InstallReleaseFromChart(chartRequested, ns, helm.InstallWait(true), helm.ReleaseName("rafter-release"), helm.InstallDescription("data"))
+
+	resp, err := helmClient.InstallReleaseFromChart(chartRequested, "default", helm.InstallWait(true), helm.ReleaseName("rafter-release"), helm.InstallDescription("data"))
 	if err != nil {
 		log.Fatal(errors.Wrap(err, "while installing helm chart"))
 	}
 	fmt.Printf("Resp: %v\n", resp)
-	// resp, err := helmClient.InstallRelease("charts/rafter-controller-manager", "kyma-system")
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// log.Println(resp)
-	time.Sleep(30 * time.Second)
 }
 
 func startKind() (*cluster.Context, error) {
@@ -194,7 +191,7 @@ func watchTillerUntilReady(namespace string, client kubernetes.Interface, timeou
 	}
 }
 
-func setupTillerConnection(config *rest.Config, client kubernetes.Clientset, ns string, ) (string, error) {
+func setupTillerConnection(config *rest.Config, client kubernetes.Clientset, ns string) (string, error) {
 	tillerTunnel, err := portforwarder.New(ns, &client, config)
 	if err != nil {
 		return "", err
