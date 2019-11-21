@@ -3,7 +3,9 @@ package main
 import (
 	"fmt"
 	"log"
-	"os"
+	`os`
+	`path/filepath`
+	`strings`
 	"time"
 
 	"github.com/pkg/errors"
@@ -13,12 +15,13 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/helm/cmd/helm/installer"
 	"k8s.io/helm/pkg/chartutil"
-	"k8s.io/helm/pkg/downloader"
-	"k8s.io/helm/pkg/getter"
+	`k8s.io/helm/pkg/downloader`
+	`k8s.io/helm/pkg/getter`
 	"k8s.io/helm/pkg/helm"
-	"k8s.io/helm/pkg/helm/environment"
+	`k8s.io/helm/pkg/helm/environment`
+	`k8s.io/helm/pkg/helm/helmpath`
 	"k8s.io/helm/pkg/helm/portforwarder"
-	"k8s.io/helm/pkg/renderutil"
+	`k8s.io/helm/pkg/repo`
 	"sigs.k8s.io/kind/pkg/cluster/create"
 
 	"k8s.io/client-go/kubernetes"
@@ -27,11 +30,20 @@ import (
 )
 
 var (
-	kindImage   = "kindest/node:v1.16.2"
-	contextName = "kind-ci"
+	kindImage     = "kindest/node:v1.16.2"
+	contextName   = "kind-ci"
+	TLSCaCertFile = "/Users/i354746/.helm/ca.pem"
+	TLSCertFile   = "/Users/i354746/.helm/cert.pem"
+	TLSKeyFile    = "/Users/i354746/.helm/key.pem"
+	archive       = "/Users/i354746/.helm/cache/archive"
+	helmRepo      = "/Users/i354746/.helm/repository"
+	home          = "/Users/i354746/.helm"
 )
 
 func main() {
+	// handle it as well
+	// helm repo add rafter-charts https://rafter-charts.storage.googleapis.com
+	// helm repo update
 	ns := "kube-system"
 	tiller := "tiller"
 	ctx := cluster.NewContext(contextName)
@@ -45,9 +57,10 @@ func main() {
 	if err != nil {
 		log.Fatal(errors.Wrap(err, "while starting Kind"))
 	}
-	defer deleteKind(ctxKind)
+	// defer deleteKind(ctxKind)
 
 	config, err := clientcmd.BuildConfigFromFlags("", ctxKind.KubeConfigPath())
+
 	if err != nil {
 		log.Fatal(errors.Wrap(err, "while building config from kubeconfig path"))
 	}
@@ -84,6 +97,7 @@ func main() {
 		MaxHistory:                   200,
 		Namespace:                    ns,
 		AutoMountServiceAccountToken: true,
+		UseCanary:                    false,
 	})
 
 	if err != nil {
@@ -100,47 +114,22 @@ func main() {
 
 	options := []helm.Option{helm.Host(tillerHost), helm.ConnectTimeout(int64(300))}
 	helmClient := helm.NewClient(options...)
-
 	if err := helmClient.PingTiller(); err != nil {
 		log.Fatal(errors.Wrap(err, "while pinging Tiller"))
 	}
 	log.Println("Tiller successfully pinged")
 
-	chartDir := "charts/rafter-front-matter-service"
-
-	chartRequested, err := chartutil.Load(chartDir)
+	cp, err := locateChartPath("", "", "", "rafter-charts/rafter", "", false, defaultKeyring(), "", "", "")
+	if err != nil {
+		log.Fatal(errors.Wrap(err, "while locating chart path"))
+	}
+	chartRequested, err := chartutil.Load(cp)
 	if err != nil {
 		log.Fatal(errors.Wrap(err, "while loading chart"))
 	}
 
-	time.Sleep(30 * time.Second)
-
-	if req, err := chartutil.LoadRequirements(chartRequested); err == nil {
-		// If checkDependencies returns an error, we have unfulfilled dependencies.
-		// As of Helm 2.4.0, this is treated as a stopping condition:
-		// https://github.com/kubernetes/helm/issues/2209
-		if err := renderutil.CheckDependencies(chartRequested, req); err != nil {
-
-			man := &downloader.Manager{
-				Out:       os.Stdout,
-				ChartPath: chartDir,
-
-				SkipUpdate: false,
-				Getters:    getter.All(environment.EnvSettings{}),
-			}
-			if err := man.Update(); err != nil {
-				log.Fatal("here")
-			}
-
-			// Update all dependencies which are present in /charts.
-			chartRequested, err = chartutil.Load(chartDir)
-			if err != nil {
-				log.Fatal("hereererer")
-			}
-
-		}
-	} else if err != chartutil.ErrRequirementsNotFound {
-		log.Fatal()
+	if _, err := chartutil.LoadRequirements(chartRequested); err != nil {
+		log.Fatal(errors.Wrap(err, "while loading requirements"))
 	}
 
 	resp, err := helmClient.InstallReleaseFromChart(chartRequested, "default", helm.InstallWait(true), helm.ReleaseName("rafter-release"), helm.InstallDescription("data"))
@@ -148,6 +137,75 @@ func main() {
 		log.Fatal(errors.Wrap(err, "while installing helm chart"))
 	}
 	fmt.Printf("Resp: %v\n", resp)
+}
+
+func defaultKeyring() string {
+	return os.ExpandEnv("$HOME/.gnupg/pubring.gpg")
+}
+
+func locateChartPath(repoURL, username, password, name, version string, verify bool, keyring,
+	certFile, keyFile, caFile string) (string, error) {
+	name = strings.TrimSpace(name)
+	version = strings.TrimSpace(version)
+	if fi, err := os.Stat(name); err == nil {
+		abs, err := filepath.Abs(name)
+		if err != nil {
+			return abs, err
+		}
+		if verify {
+			if fi.IsDir() {
+				return "", errors.New("cannot verify a directory")
+			}
+			if _, err := downloader.VerifyChart(abs, keyring); err != nil {
+				return "", err
+			}
+		}
+		return abs, nil
+	}
+	if filepath.IsAbs(name) || strings.HasPrefix(name, ".") {
+		return name, fmt.Errorf("path %q not found", name)
+	}
+
+	crepo := filepath.Join(helmRepo, name)
+	if _, err := os.Stat(crepo); err == nil {
+		return filepath.Abs(crepo)
+	}
+
+	dl := downloader.ChartDownloader{
+		HelmHome: helmpath.Home(home),
+		Out:      os.Stdout,
+		Keyring:  keyring,
+		Getters:  getter.All(environment.EnvSettings{}),
+		Username: username,
+		Password: password,
+	}
+	if verify {
+		dl.Verify = downloader.VerifyAlways
+	}
+	if repoURL != "" {
+		chartURL, err := repo.FindChartInAuthRepoURL(repoURL, username, password, name, version,
+			certFile, keyFile, caFile, getter.All(environment.EnvSettings{}))
+		if err != nil {
+			return "", err
+		}
+		name = chartURL
+	}
+
+	if _, err := os.Stat(archive); os.IsNotExist(err) {
+		os.MkdirAll(archive, 0744)
+	}
+
+	filename, _, err := dl.DownloadTo(name, version, archive)
+	if err == nil {
+		lname, err := filepath.Abs(filename)
+		if err != nil {
+			return filename, err
+		}
+
+		return lname, nil
+	}
+
+	return filename, fmt.Errorf("failed to download %q (hint: running `helm repo update` may help)", name)
 }
 
 func startKind() (*cluster.Context, error) {

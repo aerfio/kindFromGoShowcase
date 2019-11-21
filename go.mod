@@ -7,7 +7,6 @@ require (
 	github.com/Masterminds/goutils v1.1.0 // indirect
 	github.com/Masterminds/semver v1.5.0 // indirect
 	github.com/Masterminds/sprig v2.22.0+incompatible // indirect
-	github.com/gobuffalo/flect v0.1.6 // indirect
 	github.com/gobuffalo/packr v1.30.1 // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/gogo/protobuf v1.3.1 // indirect
@@ -15,8 +14,6 @@ require (
 	github.com/imdario/mergo v0.3.8 // indirect
 	github.com/jmoiron/sqlx v1.2.0 // indirect
 	github.com/lib/pq v1.2.0 // indirect
-	github.com/mattn/go-colorable v0.1.4 // indirect
-	github.com/mattn/go-isatty v0.0.10 // indirect
 	github.com/mitchellh/copystructure v1.0.0 // indirect
 	github.com/pkg/errors v0.8.1
 	github.com/rubenv/sql-migrate v0.0.0-20191025130928-9355dd04f4b3 // indirect
@@ -25,7 +22,6 @@ require (
 	golang.org/x/net v0.0.0-20191112182307-2180aed22343 // indirect
 	golang.org/x/sys v0.0.0-20191113150313-8ad342257130 // indirect
 	golang.org/x/time v0.0.0-20191024005414-555d28b269f0 // indirect
-	golang.org/x/tools v0.0.0-20191113055240-e33b02e76616 // indirect
 	gopkg.in/gorp.v1 v1.7.2 // indirect
 	gopkg.in/yaml.v2 v2.2.5 // indirect
 	k8s.io/api v0.0.0
@@ -35,7 +31,6 @@ require (
 	k8s.io/klog v1.0.0 // indirect
 	k8s.io/kubernetes v1.16.2 // indirect
 	k8s.io/utils v0.0.0-20191030222137-2b95a09bc58d // indirect
-	sigs.k8s.io/controller-tools v0.2.0 // indirect
 	sigs.k8s.io/kind v0.5.1
 )
 
